@@ -9,66 +9,61 @@
 #include <unordered_map>
 #include <algorithm>
 #include <iomanip>
+#include <cstdint>
 
 using namespace std;
 
 // --- ESTRUCTURAS DE DATOS ---
 // Estructura para almacenar una referencia pendiente
 struct ReferenciaPendiente {
-    int posicion; // Posición en codigo_hex donde se necesita el parche
-    int tamano_inmediato; // 1 o 4 (byte o dword para el desplazamiento)
-    int tipo_salto; // 0: Absoluto (dirección de etiqueta), 1: Relativo (dirección de salto)
+    int posicion;           // Posición en codigo_hex donde se necesita el parche
+    int tamano_inmediato;   // 1 o 4 (byte o dword para el desplazamiento)
+    int tipo_salto;         // 0: Absoluto (dirección de etiqueta), 1: Relativo (dirección de salto)
 };
 
 class EnsambladorIA32 {
-public:
-    // Constructor
-    EnsambladorIA32();
-
-    // Función principal para iniciar el ensamblado
-    void ensamblar(const string& archivo_entrada);
-
-    // Función para resolver las referencias a etiquetas
-    void resolver_referencias_pendientes();
-
-    // Función para generar el código máquina en hexadecimal
-    void generar_hex(const string& archivo_salida);
-
-    // Función para generar los reportes de las tablas
-    void generar_reportes();
-
 private:
-    // Tablas de ensamblado requeridas
-    unordered_map<string, int> tabla_simbolos; [cite_start]// Etiqueta -> Dirección (Contador de Posición) [cite: 7]
-    unordered_map<string, vector<ReferenciaPendiente>> referencias_pendientes; [cite_start]// Etiqueta -> Lista de posiciones a parchear [cite: 8]
-    vector<uint8_t> codigo_hex; [cite_start]// Vector para el código máquina generado [cite: 9]
-    int contador_posicion; // Equivalente al Location Counter
+    int contador_posicion; // Contador de posición (CP)
+    unordered_map<string, int> tabla_simbolos; // Etiqueta -> Dirección (CP)
+    unordered_map<string, vector<ReferenciaPendiente>> referencias_pendientes; // Etiqueta -> Lista de refs
+    vector<uint8_t> codigo_hex; // Código máquina generado
 
-    // Mapas para codificación
     unordered_map<string, uint8_t> reg32_map; // Códigos de 32-bit (EAX=0, ECX=1, ...)
-    unordered_map<string, uint8_t> reg8_map; // Códigos de 8-bit
+    unordered_map<string, uint8_t> reg8_map;  // Códigos de 8-bit
 
-    // --- FUNCIONES DE SOPORTE ---
+    // --- MÉTODOS AUXILIARES ---
     void inicializar_mapas();
     void limpiar_linea(string& linea);
     bool es_etiqueta(const string& s);
-    void procesar_etiqueta(const string& etiqueta);
-    void procesar_linea(string linea);
 
-    // --- FUNCIONES DE PROCESAMIENTO DE INSTRUCCIONES ---
+    void procesar_linea(string linea);
+    void procesar_etiqueta(const string& etiqueta);
     void procesar_instruccion(const string& linea);
+
     void procesar_mov(const string& operandos);
     void procesar_add(const string& operandos);
-    void procesar_sub(const string& operandos); // Nueva instrucción
-    void procesar_jmp(const string& operandos);
-    void procesar_condicional(const string& mnem, const string& operandos);
+    void procesar_sub(const string& operandos);
+    void procesar_jmp(string operandos); // por valor para poder limpiarla
+    void procesar_condicional(const string& mnem, string operandos); // por valor para poder limpiarla
 
     // --- UTILIDADES DE CODIFICACIÓN ---
     uint8_t generar_modrm(uint8_t mod, uint8_t reg, uint8_t rm);
     void agregar_byte(uint8_t byte);
     void agregar_dword(uint32_t dword); // Para inmediatos y desplazamientos de 32 bits
     bool obtener_reg32(const string& op, uint8_t& reg_code);
-    bool procesar_mem_simple(const string& operando, uint8_t& modrm_byte, const uint8_t reg_code, bool es_destino, uint8_t op_extension = 0);
+    bool procesar_mem_simple(const string& operando,
+                             uint8_t& modrm_byte,
+                             const uint8_t reg_code,
+                             bool es_destino,
+                             uint8_t op_extension = 0);
+
+public:
+    EnsambladorIA32();
+
+    void ensamblar(const string& archivo_entrada);
+    void resolver_referencias_pendientes();
+    void generar_hex(const string& archivo_salida);
+    void generar_reportes();
 };
 
 #endif // ENSAMBLADOR_IA32_HPP
